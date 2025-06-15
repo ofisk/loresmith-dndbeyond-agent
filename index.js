@@ -192,7 +192,7 @@ This is an API-only agent. Use the /ui endpoint for the web interface.`, {
             showStatus('info', 'Looking up character...');
             
             try {
-                const response = await fetch(\`/character/\${characterId}\`);
+                const response = await fetch(\`./character/\${characterId}\`);
                 
                 const result = await response.json();
                 
