@@ -40,6 +40,11 @@ export default {
       return this.handleUIChunk(req);
     }
 
+    // Serve complete UI for main agent integration
+    if (pathname === "/ui" && req.method === "GET") {
+      return this.handleCompleteUI(req);
+    }
+
     // CORS
     if (req.method === "OPTIONS") {
       return new Response(null, {
@@ -126,6 +131,193 @@ This is an API-only agent. Use the /ui endpoint for the web interface.`, {
       speed: data.speed?.walk || 30,
       avatarUrl: data.avatarUrl
     };
+  },
+
+  // Handle complete UI requests for main agent integration
+  async handleCompleteUI(req) {
+    const step = new URL(req.url).searchParams.get('step') || '1';
+    
+    // Return complete HTML interface for D&D Beyond character lookup
+    const completeUI = `
+      <div class="dnd-agent-ui">
+        <style>
+          .dnd-agent-ui {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: system-ui, -apple-system, sans-serif;
+          }
+          
+          .dnd-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            border: 1px solid #e1e5e9;
+          }
+          
+          .dnd-section h3 {
+            margin: 0 0 16px 0;
+            color: #8B0000;
+            font-size: 1.25rem;
+            font-weight: 600;
+          }
+          
+          .dnd-input-group {
+            margin-bottom: 16px;
+          }
+          
+          .dnd-input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            color: #374151;
+          }
+          
+          .dnd-input-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+          }
+          
+          .dnd-input-group input:focus {
+            outline: none;
+            border-color: #DC143C;
+            box-shadow: 0 0 0 3px rgba(220, 20, 60, 0.1);
+          }
+          
+          .dnd-input-group small {
+            display: block;
+            margin-top: 4px;
+            color: #6b7280;
+            font-size: 12px;
+          }
+          
+          .dnd-btn {
+            background: linear-gradient(135deg, #DC143C, #8B0000);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            margin-right: 8px;
+            margin-bottom: 8px;
+          }
+          
+          .dnd-btn:hover {
+            background: linear-gradient(135deg, #B91C3C, #7F1D1D);
+          }
+          
+          .dnd-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+          }
+          
+          .dnd-status {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 16px 0;
+            font-size: 14px;
+            display: none;
+          }
+          
+          .dnd-status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+          }
+          
+          .dnd-status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fecaca;
+          }
+          
+          .dnd-status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+          }
+          
+          .character-result {
+            margin-top: 20px;
+            display: none;
+          }
+          
+          .character-display {
+            background: #f8f9fa;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+          }
+          
+          .character-display h4 {
+            margin: 0 0 12px 0;
+            color: #8B0000;
+            font-size: 1.5rem;
+          }
+          
+          .character-display p {
+            margin: 8px 0;
+            color: #374151;
+          }
+          
+          .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+          }
+          
+          .stats-grid > div {
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            text-align: center;
+            border: 1px solid #e5e7eb;
+          }
+          
+          .stats-grid strong {
+            color: #8B0000;
+          }
+        </style>
+        
+        <div class="dnd-section">
+          <h3>🐉 D&D Beyond Character Lookup</h3>
+          <p>Access public character sheets and campaign information from D&D Beyond.</p>
+          
+          <div class="dnd-input-group">
+            <label for="dndCharacterId">Character ID</label>
+            <input type="number" id="dndCharacterId" placeholder="Enter D&D Beyond character ID">
+            <small>Note: Only public characters can be accessed</small>
+          </div>
+          
+          <button class="dnd-btn" onclick="lookupDndCharacter()">Get Character</button>
+          
+          <div id="dndCharacterResult" class="character-result"></div>
+        </div>
+        
+        <div id="dndStatus" class="dnd-status"></div>
+      </div>
+      
+      <script>
+        ${this.getDndAgentScripts()}
+      </script>
+    `;
+
+    return new Response(completeUI, {
+      headers: {
+        'Content-Type': 'text/html',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
   },
 
   // Handle UI chunk requests for main agent integration
