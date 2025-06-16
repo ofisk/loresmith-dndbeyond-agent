@@ -13,6 +13,14 @@ export default {
         "name": "D&D Beyond Character & Campaign Agent",
         "description": "Fetches character sheets, campaign information, and party details from D&D Beyond.",
         "version": "1.0.0",
+        "icon": "🐉",
+        "example_prompts": [
+          "Look up my D&D character",
+          "Show me character stats",
+          "Get my campaign information",
+          "Find my party details",
+          "Check my character sheet"
+        ],
         "capabilities": ["character-lookup", "campaign-data", "party-management"],
         "api": {
           "url": "https://dndbeyond-agent.example.workers.dev",
