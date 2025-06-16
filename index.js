@@ -35,6 +35,11 @@ export default {
       });
     }
 
+    // Serve UI chunks for main agent integration
+    if (pathname === "/ui-chunk" && req.method === "GET") {
+      return this.handleUIChunk(req);
+    }
+
     // CORS
     if (req.method === "OPTIONS") {
       return new Response(null, {
@@ -123,7 +128,126 @@ This is an API-only agent. Use the /ui endpoint for the web interface.`, {
     };
   },
 
+  // Handle UI chunk requests for main agent integration
+  async handleUIChunk(req) {
+    const url = new URL(req.url);
+    const step = url.searchParams.get('step') || '1';
+    
+    // Return a simple D&D Beyond character lookup interface
+    const uiChunk = {
+      success: true,
+      title: '🐉 D&D Beyond Character Lookup',
+      html: `
+        <div class="agent-ui-chunk">
+          <div class="prompt">
+            <h3>🐉 D&D Beyond Character Lookup</h3>
+            <p>Access public character sheets and campaign information from D&D Beyond.</p>
+          </div>
+          
+          <div class="section">
+            <h4>Character Lookup</h4>
+            <div class="input-group">
+              <label for="dndCharacterId">Character ID</label>
+              <input type="number" id="dndCharacterId" placeholder="Enter D&D Beyond character ID">
+              <small>Note: Only public characters can be accessed</small>
+            </div>
+            
+            <div class="actions">
+              <button class="btn btn-primary" onclick="lookupDndCharacter()">Get Character</button>
+            </div>
+            
+            <div id="dndCharacterResult" class="character-result" style="display: none;"></div>
+          </div>
+        </div>
+      `,
+      scripts: this.getDndAgentScripts()
+    };
 
+    return new Response(JSON.stringify(uiChunk), {
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
+  },
+
+  // Get D&D Beyond agent JavaScript functions for UI chunks
+  getDndAgentScripts() {
+    return `
+      async function lookupDndCharacter() {
+        const characterIdInput = document.getElementById('dndCharacterId');
+        const characterId = characterIdInput.value.trim();
+        
+        if (!characterId) {
+          showAgentStatus('Please enter a character ID', 'error');
+          return;
+        }
+        
+        try {
+          showAgentStatus('Looking up character...', 'info');
+          const response = await fetch('./character/' + characterId);
+          
+          if (!response.ok) {
+            throw new Error('Character not found or not public');
+          }
+          
+          const result = await response.json();
+          if (result.success) {
+            displayDndCharacter(result.character);
+            hideAgentStatus();
+          } else {
+            throw new Error(result.error || 'Failed to fetch character');
+          }
+          
+        } catch (error) {
+          showAgentStatus('Error looking up character: ' + error.message, 'error');
+        }
+      }
+      
+      function displayDndCharacter(character) {
+        const resultDiv = document.getElementById('dndCharacterResult');
+        if (!resultDiv) return;
+        
+        let html = '<div class="character-display">';
+        html += '<h4>' + character.name + '</h4>';
+        
+        if (character.classes && character.classes.length > 0) {
+          const classInfo = character.classes.map(c => c.name + ' ' + c.level).join(', ');
+          html += '<p><strong>Classes:</strong> ' + classInfo + '</p>';
+        }
+        
+        html += '<p><strong>Level:</strong> ' + character.level + '</p>';
+        
+        if (character.race) {
+          html += '<p><strong>Race:</strong> ' + character.race + '</p>';
+        }
+        
+        if (character.hitPoints) {
+          html += '<p><strong>Hit Points:</strong> ' + character.hitPoints.current + '/' + character.hitPoints.max + '</p>';
+        }
+        
+        if (character.armorClass) {
+          html += '<p><strong>Armor Class:</strong> ' + character.armorClass + '</p>';
+        }
+        
+        if (character.stats) {
+          html += '<div class="stats-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px;">';
+          html += '<div><strong>STR:</strong> ' + character.stats.strength + '</div>';
+          html += '<div><strong>DEX:</strong> ' + character.stats.dexterity + '</div>';
+          html += '<div><strong>CON:</strong> ' + character.stats.constitution + '</div>';
+          html += '<div><strong>INT:</strong> ' + character.stats.intelligence + '</div>';
+          html += '<div><strong>WIS:</strong> ' + character.stats.wisdom + '</div>';
+          html += '<div><strong>CHA:</strong> ' + character.stats.charisma + '</div>';
+          html += '</div>';
+        }
+        
+        html += '</div>';
+        
+        resultDiv.innerHTML = html;
+        resultDiv.style.display = 'block';
+      }
+    `;
+  },
 
   getDndbeyondAgentUI(env) {
     return `<!DOCTYPE html>
